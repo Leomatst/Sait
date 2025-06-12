@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Betoneiras - Sistema</title>
+
+  <!-- PWA Config -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#8b5cf6" />
+  <link rel="icon" href="icon-192.png" type="image/png" />
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log('✅ Service Worker registrado!'))
+        .catch((error) => console.log('❌ Erro no Service Worker:', error));
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #121212;
+      color: #eee;
+      margin: 0;
+      padding: 16px;
+    }
+    .hidden { display: none; }
+    #loginBox, #mainContent {
+      max-width: 960px;
+      margin: 0 auto;
+      background: #1e1e1e;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.8);
+    }
+    h1 {
+      margin-bottom: 24px;
+      font-weight: 700;
+      color: #8b5cf6;
+    }
+    label {
+      display: block;
+      margin: 12px 0 6px 0;
+      font-weight: 600;
+    }
+    select, input[type="password"] {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      border: none;
+      font-size: 16px;
+      background: #2a2a2a;
+      color: #eee;
+    }
+    button {
+      background: linear-gradient(135deg, #8b5cf6, #06b6d4);
+      border: none;
+      padding: 14px 30px;
+      border-radius: 12px;
+      font-weight: 700;
+      color: white;
+      cursor: pointer;
+      font-size: 16px;
+      transition: transform 0.3s ease;
+    }
+    button:hover {
+      transform: scale(1.05);
+    }
+    #loginError {
+      color: #ff6b6b;
+      font-weight: 600;
+      margin-bottom: 12px;
+      min-height: 1.2em;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 24px;
+    }
+    thead tr {
+      background: #2b2b2b;
+      text-align: left;
+    }
+    th, td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #333;
+    }
+    tr:hover {
+      background: #333;
+    }
+    .status-disponível {
+      color: #22c55e;
+      font-weight: 700;
+    }
+    .status-alugada {
+      color: #3b82f6;
+      font-weight: 700;
+    }
+    .status-manutenção {
+      color: #facc15;
+      font-weight: 700;
+    }
+    .status-sucata {
+      color: #ef4444;
+      font-weight: 700;
+    }
+    select {
+      background: #1e1e1e;
+      color: #eee;
+      border: 1px solid #444;
+      border-radius: 8px;
+    }
+    td:nth-child(2), th:nth-child(2) {
+      color: #eee !important;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <div id="loginBox">
+    <h1>Login</h1>
+    <label for="userSelect">Usuário</label>
+    <select id="userSelect" aria-label="Selecione o usuário">
+      <option value="Leonardo">Leonardo</option>
+      <option value="Silvia">Silvia</option>
+    </select>
+    <label for="password">Senha</label>
+    <input type="password" id="password" aria-label="Digite a senha" />
+    <div id="loginError" role="alert" aria-live="assertive"></div>
+    <button onclick="login()">Entrar</button>
+  </div>
+
+  <main id="mainContent" class="hidden" tabindex="-1" aria-label="Conteúdo principal">
+    <h1>Lista de Betoneiras</h1>
+    <button onclick="logout()" style="margin-bottom:16px;">Sair</button>
+    <table id="betoneiraTable" aria-describedby="descTabela">
+      <caption id="descTabela" class="sr-only">Tabela de betoneiras e seus status</caption>
+      <thead>
+        <tr>
+          <th scope="col">ID</th>
+          <th scope="col">Nome</th>
+          <th scope="col">Status</th>
+          <th scope="col">Último Responsável</th>
+          <th scope="col">Alterar Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Betoneiras serão renderizadas aqui -->
+      </tbody>
+    </table>
+  </main>
+
+  <script>
+    const users = {
+      "Leonardo": "01121723",
+      "Silvia": "Silvia123"
+    };
+
+    let betoneiras = [];
+
+    function gerarBetoneiras() {
+      for (let i = 1; i <= 97; i++) {
+        const id = "BT" + String(i).padStart(2, '0');
+        const nome = "BETONEIRA 400L";
+        betoneiras.push({ id, nome, status: "disponível", ultimoResponsavel: "N/A" });
+      }
+    }
+
+    function salvarBetoneiras() {
+      localStorage.setItem("betoneirasData", JSON.stringify(betoneiras));
+    }
+
+    function carregarBetoneiras() {
+      const data = localStorage.getItem("betoneirasData");
+      if (data) {
+        betoneiras = JSON.parse(data);
+      } else {
+        gerarBetoneiras();
+        salvarBetoneiras();
+      }
+    }
+
+    function login() {
+      const user = document.getElementById("userSelect").value;
+      const pass = document.getElementById("password").value;
+      const errorBox = document.getElementById("loginError");
+
+      if (users[user] === pass) {
+        document.getElementById("loginBox").classList.add("hidden");
+        document.getElementById("mainContent").classList.remove("hidden");
+        carregarBetoneiras();
+        renderTabela();
+        errorBox.textContent = "";
+        document.getElementById("mainContent").focus();
+      } else {
+        errorBox.textContent = "Senha incorreta!";
+      }
+    }
+
+    function logout() {
+      location.reload();
+    }
+
+    function renderTabela() {
+      const tbody = document.querySelector("#betoneiraTable tbody");
+      tbody.innerHTML = "";
+
+      betoneiras.forEach((b, i) => {
+        const tr = document.createElement("tr");
+
+        const tdId = document.createElement("td");
+        tdId.textContent = b.id;
+
+        const tdNome = document.createElement("td");
+        tdNome.textContent = b.nome;
+
+        const tdStatus = document.createElement("td");
+        tdStatus.textContent = b.status;
+        tdStatus.className = "status-" + b.status;
+
+        const tdResponsavel = document.createElement("td");
+        tdResponsavel.textContent = b.ultimoResponsavel;
+
+        const tdAcao = document.createElement("td");
+        const select = document.createElement("select");
+        ["disponível", "alugada", "manutenção", "sucata"].forEach(status => {
+          const option = document.createElement("option");
+          option.value = status;
+          option.textContent = status;
+          if (status === b.status) option.selected = true;
+          select.appendChild(option);
+        });
+
+        select.onchange = () => {
+          const user = document.getElementById("userSelect").value;
+          betoneiras[i].status = select.value;
+          betoneiras[i].ultimoResponsavel = user;
+          salvarBetoneiras();
+          renderTabela();
+        };
+
+        tdAcao.appendChild(select);
+
+        tr.appendChild(tdId);
+        tr.appendChild(tdNome);
+        tr.appendChild(tdStatus);
+        tr.appendChild(tdResponsavel);
+        tr.appendChild(tdAcao);
+        tbody.appendChild(tr);
+      });
+    }
+  </script>
+</body>
+</html>
